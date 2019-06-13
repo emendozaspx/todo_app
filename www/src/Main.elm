@@ -4,8 +4,9 @@ import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Url
 import Http
+import Json.Decode exposing (Decoder, bool, field, int, map4, string)
+import Url
 
 
 
@@ -33,19 +34,35 @@ type Model
     | Loading
     | Success Todo
 
+
 type alias Todo =
-    { id: Int
+    { id : Int
     , title : String
     , body : String
+    , isComplete : Bool
     }
 
 
-init : () -> ( Model, Msg )
-init _ =
-    ( Loading
-    , Http.get
+todosDecoder : Decoder Todo
+todosDecoder =
+    map4 Todo
+        (field "id" int)
+        (field "title" string)
+        (field "body" string)
+        (field "isComplete" bool)
+
+
+getTodos : Cmd Msg
+getTodos =
+    Http.get
         { url = "http://localhost:8000/api/todos"
-        , expect })
+        , expect = Http.expectJson GotTodos todosDecoder
+        }
+
+
+init : () -> ( Model, Cmd Msg )
+init _ =
+    ( Loading, getTodos )
 
 
 
@@ -53,8 +70,8 @@ init _ =
 
 
 type Msg
-    = LinkClicked Browser.UrlRequest
-    | UrlChanged Url.Url
+    = FailedGet
+    | GotTodos (Result Http.Error Todo)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
